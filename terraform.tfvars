@@ -15,7 +15,7 @@ lifecycle_rules = [
     prefix  = ""
     transitions = [
       {
-        days          = 30
+        days          = 29
         storage_class = "STANDARD_IA"
       },
       {
