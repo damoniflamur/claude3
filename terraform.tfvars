@@ -6,6 +6,8 @@ tags = {
   Environment = "dev"
   Project     = "my-app"
   ManagedBy   = "terraform"
+  Owner       = "platform-team"
+  CostCenter  = "engineering"
 }
 
 lifecycle_rules = [
