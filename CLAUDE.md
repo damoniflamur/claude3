@@ -1,34 +1,48 @@
-# My Terraform Project
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this project does
-Manages AWS infrastructure (VPC, EC2, S3) with reusable Terraform modules.
+Manages AWS infrastructure (VPC, EC2, S3) with reusable Terraform modules across dev and prod environments.
 
-## Rules Claude must follow
-- Never run `terraform apply` without my approval
+## Rules
+- Never run `terraform apply` without explicit user approval
 - Always run `terraform fmt` and `terraform validate` before planning
 - Never touch prod without explicit confirmation
-- Tag every resource: env, project, owner
+- Tag every resource: `env`, `project`, `owner`
+- Never edit modules directly per environment — modules in `terraform/modules/` are shared
 
-## Project structure
+## Commands
+Always `cd` into the target environment before running Terraform:
+
+```bash
+cd terraform/environments/dev   # or prod
+
+terraform fmt                   # format; run before any plan
+terraform validate              # validate; run before any plan
+terraform init -upgrade         # init or upgrade providers
+terraform plan -out=tfplan      # plan and save output
+terraform apply tfplan          # apply saved plan only
+```
+
+## Custom skills
+- `/tfplan` — runs fmt, init, validate, plan, summarises adds/changes/destroys (flags destroys as HIGH RISK), then asks for confirmation before applying
+- `/tfapply` — applies a saved `tfplan` file; requires typing `YES` (exact) to confirm
+
+Use these skills instead of running Terraform commands manually.
+
+## Architecture
 ```
 terraform/
-├── modules/          ← reusable building blocks
+├── modules/          ← reusable building blocks (shared across envs)
 │   ├── vpc/          ← VPC, subnets, internet gateway
 │   ├── ec2/          ← EC2 instance + security group
-│   └── s3/           ← S3 bucket (encrypted, public blocked)
+│   └── s3/           ← S3 bucket (encrypted, public access blocked)
 └── environments/
-    ├── dev/          ← small instances, no versioning
-    └── prod/         ← larger instances, versioning on
+    ├── dev/          ← small instances, no S3 versioning
+    └── prod/         ← larger instances, S3 versioning enabled
 ```
 
-## How to work in this project
-- Always cd into the environment folder before running terraform
-  cd terraform/environments/dev
-- State is stored in S3, one key per environment
-- Modules live in terraform/modules/ — never edit them per environment
+Remote state is stored in S3 bucket `my-company-tfstate`, one key per environment. Region: `us-east-1`. Requires Terraform >= 1.6.
 
-## Project details
-- Cloud: AWS
-- Region: us-east-1
-- Terraform version: >= 1.6
-- State bucket: my-company-tfstate
+Sensitive files (`.tfvars.json`, override files) and local state/plan files are gitignored.
