@@ -79,4 +79,38 @@ jobs:
           if-no-files-found: error
 
       - name: Terraform Apply
-        run: terraform apply -input=false tfplan
+        run: terraform apply -input=false tfplan | tee tfapply.txt
+
+      - name: Publish Apply Summary
+        if: always()
+        run: |
+          APPLY_SUMMARY=$(grep -E '^Apply complete!|^No changes\.' tfapply.txt | tail -1 || true)
+          APPLY_CHANGES=$(grep -E '^  # .*: (Creating|Modifying|Destroying)\.\.\.' tfapply.txt || true)
+
+          {
+            echo
+            echo "## Terraform Apply Result"
+            echo
+            if [ -n "$APPLY_SUMMARY" ]; then
+              echo "- $APPLY_SUMMARY"
+            else
+              echo "- Apply summary not found"
+            fi
+            echo
+            echo "### Apply Actions"
+            if [ -n "$APPLY_CHANGES" ]; then
+              echo '```'
+              echo "$APPLY_CHANGES"
+              echo '```'
+            else
+              echo "No resource-level apply actions found."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Apply Output Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-apply-output-dev
+          path: terraform/environments/dev/tfapply.txt
+          if-no-files-found: error
