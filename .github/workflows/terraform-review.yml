@@ -37,10 +37,18 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -out=tfplan -no-color 2>&1 | tee plan.txt
+        run: terraform plan -no-color 2>&1 | tee plan.txt
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Read Plan Output
+        id: read_plan
+        run: |
+          PLAN_CONTENT=$(cat plan.txt)
+          echo "plan_content<<EOF" >> $GITHUB_OUTPUT
+          echo "$PLAN_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Claude Review
         uses: anthropics/claude-code-action@beta
@@ -48,10 +56,8 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             You are acting as the terraform-reviewer agent defined in .claude/agents/terraform-reviewer.md.
-            Review the Terraform plan output below using the skills in .claude/skills/.
-            Post your consolidated report as a PR comment.
+            Apply every skill in .claude/skills/ and post a single review comment using the output format in the agent file.
 
             <plan>
-            $(cat plan.txt)
+            ${{ steps.read_plan.outputs.plan_content }}
             </plan>
-          post_as_pr_comment: true
