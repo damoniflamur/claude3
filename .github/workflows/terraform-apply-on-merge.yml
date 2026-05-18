@@ -44,5 +44,39 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -input=false -out=tfplan
 
+      - name: Generate Readable Plan Output
+        run: terraform show -no-color tfplan | tee tfplan.txt
+
+      - name: Publish Plan Summary
+        run: |
+          PLAN_SUMMARY=$(grep -E '^Plan:' tfplan.txt | tail -1 || true)
+          CHANGED_RESOURCES=$(grep -E '^  # .* will be ' tfplan.txt || true)
+
+          {
+            echo "## Terraform Apply Preview"
+            echo
+            if [ -n "$PLAN_SUMMARY" ]; then
+              echo "- $PLAN_SUMMARY"
+            else
+              echo "- Plan summary not found"
+            fi
+            echo
+            echo "### Resources With Changes"
+            if [ -n "$CHANGED_RESOURCES" ]; then
+              echo '```'
+              echo "$CHANGED_RESOURCES"
+              echo '```'
+            else
+              echo "No resource-level changes found."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Plan Output Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-output-dev
+          path: terraform/environments/dev/tfplan.txt
+          if-no-files-found: error
+
       - name: Terraform Apply
         run: terraform apply -input=false tfplan
