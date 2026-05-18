@@ -1,0 +1,57 @@
+name: Terraform Review
+
+on:
+  pull_request:
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+
+jobs:
+  review:
+    name: Claude Terraform Review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.6"
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -out=tfplan -no-color 2>&1 | tee plan.txt
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Claude Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are acting as the terraform-reviewer agent defined in .claude/agents/terraform-reviewer.md.
+            Review the Terraform plan output below using the skills in .claude/skills/.
+            Post your consolidated report as a PR comment.
+
+            <plan>
+            $(cat plan.txt)
+            </plan>
+          post_as_pr_comment: true

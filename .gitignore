@@ -1,0 +1,17 @@
+# Terraform state
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+.terraform/
+.terraform.lock.hcl
+tfplan
+
+# Sensitive
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# OS
+.DS_Store
