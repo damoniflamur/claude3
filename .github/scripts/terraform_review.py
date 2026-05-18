@@ -8,9 +8,19 @@ for path in sorted(glob.glob("**/*.tf", recursive=True) + glob.glob("**/*.tfvars
     with open(path) as f:
         files += f"\n\n### {path}\n{f.read()}"
 
+SKILL_MAP = {
+    "security": ".claude/skills/security.md",
+    "cost": ".claude/skills/cost.md",
+    "best-practices": ".claude/skills/best-practices.md",
+}
+
+labels = [l.strip() for l in os.environ.get("PR_LABELS", "").split(",") if l.strip()]
+skill_files = [SKILL_MAP[l] for l in labels if l in SKILL_MAP] or [SKILL_MAP["security"]]
+
 skills = ""
-with open(".claude/skills/security.md") as f:
-    skills = f.read()
+for path in skill_files:
+    with open(path) as f:
+        skills += f"\n\n---\n{f.read()}"
 
 prompt = f"""You are a senior DevOps engineer reviewing a Terraform PR.
 Apply every check defined in the skills below. Score out of 100.
