@@ -1,22 +1,32 @@
 ---
 name: tfapply
-description: Apply a saved Terraform plan that was already reviewed. Use when the user asks to apply, run tfapply, or execute a saved plan.
+description: Apply a saved Terraform plan after GitHub PR approval.
 user-invocable: true
 allowed-tools:
   - Bash
   - Read
+  - mcp__github__list_pull_requests
+  - mcp__github__get_pull_request_reviews
+  - mcp__github__merge_pull_request
 ---
 
 # /tfapply — Apply a Reviewed Terraform Plan
 
 Steps:
 
-1. Check that the `tfplan` file exists.
-   - If it does not exist, tell the user to run `/tfplan` first and stop.
-   - If it exists, run `terraform show tfplan` to verify it is a valid plan. If invalid or corrupt, tell the user to regenerate it with `/tfplan` and stop.
+1. Check that `tfplan` exists in `terraform/environments/dev/`.
+   - If missing, tell the user to run `/tfplan` first and stop.
 
-2. Show a one-line summary of what will change by parsing the plan output for resource names and actions (e.g., "Plan: 2 to add, 1 to change, 0 to destroy.").
+2. Use `mcp__github__list_pull_requests` (owner: `damoniflamur`, repo: `claude3`, state: `open`) to find a PR whose title starts with `Terraform Plan Review`.
+   - If no plan PR found: warn the user that no review PR was found, but still proceed to step 3.
+   - If a plan PR is found, use `mcp__github__get_pull_request_reviews` to check approval status.
+     - If the PR has no approving review: tell the user to approve the PR first and stop.
+     - If the PR is approved: continue.
 
-3. Ask: "Are you sure you want to apply? Type YES to confirm." Accept only `YES` (case-sensitive). If the user provides any other input, ask again or stop.
+3. Show a one-line summary: run `terraform show -no-color tfplan` in `terraform/environments/dev/` and extract the `Plan: X to add, Y to change, Z to destroy` line.
 
-4. Run `terraform apply tfplan` and show the output summary.
+4. Ask: "Are you sure you want to apply? Type YES to confirm." Accept only `YES` (case-sensitive). Any other input: stop.
+
+5. Run `terraform apply tfplan` in `terraform/environments/dev/` and show the output summary.
+
+6. If apply succeeds and a plan PR was found, use `mcp__github__merge_pull_request` to merge it as a record of the applied change.

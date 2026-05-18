@@ -1,4 +1,5 @@
 {
+  "enabledMcpjsonServers": ["github"],
   "permissions": {
     "allow": [
       "Bash(terraform fmt *)",
