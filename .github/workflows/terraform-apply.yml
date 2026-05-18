@@ -39,15 +39,28 @@ jobs:
           path: tfplan
           retention-days: 1
 
+      - name: Security review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+          PLAN_OUTPUT: ${{ env.PLAN_TEXT }}
+        run: |
+          PLAN=$(terraform show -no-color tfplan 2>&1)
+          echo "PLAN_TEXT<<EOF" >> $GITHUB_ENV
+          echo "$PLAN" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          PLAN_OUTPUT="$PLAN" python3 .github/scripts/terraform_security.py
+
       - name: Comment plan
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           PLAN=$(terraform show -no-color tfplan 2>&1)
+          SECURITY=$(cat security.txt)
 
-          TO_ADD=$(echo "$PLAN"    | grep -c '# .* will be created'  || true)
-          TO_CHANGE=$(echo "$PLAN" | grep -c '# .* will be updated'  || true)
+          TO_ADD=$(echo "$PLAN"    | grep -c '# .* will be created'   || true)
+          TO_CHANGE=$(echo "$PLAN" | grep -c '# .* will be updated'   || true)
           TO_DESTROY=$(echo "$PLAN"| grep -c '# .* will be destroyed' || true)
 
           SUMMARY=""
@@ -60,6 +73,14 @@ jobs:
           ## Terraform Plan
 
           $SUMMARY
+
+          ---
+
+          ## Security Review
+
+          $SECURITY
+
+          ---
 
           <details>
           <summary>Full plan</summary>
