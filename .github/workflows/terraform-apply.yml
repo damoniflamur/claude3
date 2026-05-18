@@ -1,0 +1,48 @@
+name: Terraform Apply
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+
+jobs:
+  apply:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Init
+        run: terraform init
+
+      - name: Plan
+        run: terraform plan -out=tfplan
+
+      - name: Apply
+        run: terraform apply -auto-approve tfplan
+
+      - name: Comment result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            gh pr comment "$PR_NUMBER" --body "✅ **Terraform apply succeeded** on merge of this PR."
+          else
+            gh pr comment "$PR_NUMBER" --body "❌ **Terraform apply failed** — check the [Actions run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
+          fi
