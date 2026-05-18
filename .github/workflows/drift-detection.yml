@@ -1,0 +1,114 @@
+name: Terraform Drift Detection
+
+on:
+  schedule:
+    - cron: "0 8 * * *" # Daily at 08:00 UTC
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  drift-check:
+    name: Check for infrastructure drift
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev]
+    defaults:
+      run:
+        working-directory: terraform/environments/${{ matrix.environment }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.6"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Plan (drift check)
+        id: plan
+        run: |
+          terraform plan -detailed-exitcode -input=false -no-color 2>&1 | tee plan-output.txt
+          echo "exitcode=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Create issue on drift
+        if: steps.plan.outputs.exitcode == '2'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.readFileSync('terraform/environments/${{ matrix.environment }}/plan-output.txt', 'utf8');
+            const truncated = planOutput.length > 60000 ? planOutput.slice(0, 60000) + '\n... (truncated)' : planOutput;
+
+            const title = `⚠️ Terraform Drift Detected — ${{ matrix.environment }} — ${new Date().toISOString().split('T')[0]}`;
+            const body = `## Infrastructure Drift Detected
+
+            **Environment:** \`${{ matrix.environment }}\`
+            **Detected at:** ${new Date().toISOString()}
+
+            Terraform detected changes between the configuration and the actual infrastructure state.
+
+            <details>
+            <summary>Plan output</summary>
+
+            \`\`\`
+            ${truncated}
+            \`\`\`
+
+            </details>
+
+            ### Next Steps
+            1. Review the drift above
+            2. If intentional (manual change), update the Terraform config to match
+            3. If unintentional, run \`/tfplan\` and \`/tfapply\` to reconcile
+            `;
+
+            // Check for existing open drift issue to avoid duplicates
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'drift,${{ matrix.environment }}'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['drift', '${{ matrix.environment }}']
+              });
+            } else {
+              // Update existing issue with latest drift info
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: `### Updated drift detection — ${new Date().toISOString()}\n\n\`\`\`\n${truncated}\n\`\`\``
+              });
+            }
+
+      - name: Fail workflow on drift
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          echo "::error::Drift detected in ${{ matrix.environment }} environment"
+          exit 1
