@@ -1,6 +1,6 @@
 aws_region         = "us-east-1"
 bucket_name        = "my-app-bucket-unique-456"
-versioning_enabled = true1
+versioning_enabled = true
 
 tags = {
   Environment = "dev"
