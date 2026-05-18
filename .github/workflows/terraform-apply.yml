@@ -45,7 +45,34 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           PLAN=$(terraform show -no-color tfplan 2>&1)
-          gh pr comment "$PR_NUMBER" --body "$(printf '### Terraform Plan\n\n```\n%s\n```\n\nApprove the [deployment](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) to apply.' "$PLAN")"
+
+          TO_ADD=$(echo "$PLAN"    | grep -c '# .* will be created'  || true)
+          TO_CHANGE=$(echo "$PLAN" | grep -c '# .* will be updated'  || true)
+          TO_DESTROY=$(echo "$PLAN"| grep -c '# .* will be destroyed' || true)
+
+          SUMMARY=""
+          [ "$TO_ADD" -gt 0 ]     && SUMMARY="${SUMMARY} **+${TO_ADD} to add**"
+          [ "$TO_CHANGE" -gt 0 ]  && SUMMARY="${SUMMARY} **~${TO_CHANGE} to change**"
+          [ "$TO_DESTROY" -gt 0 ] && SUMMARY="${SUMMARY} **-${TO_DESTROY} to destroy**"
+          [ -z "$SUMMARY" ]       && SUMMARY="No changes — infrastructure is up to date."
+
+          gh pr comment "$PR_NUMBER" --body "$(cat <<EOF
+          ## Terraform Plan
+
+          $SUMMARY
+
+          <details>
+          <summary>Full plan</summary>
+
+          \`\`\`hcl
+          $PLAN
+          \`\`\`
+
+          </details>
+
+          > Approve the [deployment](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) to apply.
+          EOF
+          )"
 
   apply:
     needs: plan
