@@ -10,11 +10,11 @@ Terraform will perform the following actions:
         id                          = "my-company-dev-data-890381434210"
       ~ tags                        = {
             "env"     = "dev"
-          ~ "owner"   = "platform-team" -> "platform-team-2"
+          ~ "owner"   = "platform-team-2" -> "platform-team"
             "project" = "my-company"
         }
       ~ tags_all                    = {
-          ~ "owner"   = "platform-team" -> "platform-team-2"
+          ~ "owner"   = "platform-team-2" -> "platform-team"
             # (2 unchanged elements hidden)
         }
         # (12 unchanged attributes hidden)
