@@ -54,9 +54,9 @@ jobs:
           git add -A
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "fix: auto-fix review findings from PR #${PR_NUMBER}"
-          git push origin "$FIX_BRANCH"
+          git push origin "$FIX_BRANCH" --force
           SUMMARY=$(cat fix_summary.txt)
           gh pr create \
             --title "fix: auto-fix findings from PR #${PR_NUMBER}" \
             --body "$(printf '## Auto-fix\n\n%s\n\nGenerated from review findings on #%s.\n\n🤖 Claude auto-fix' "$SUMMARY" "$PR_NUMBER")" \
-            --base "$HEAD_BRANCH"
+            --base "$HEAD_BRANCH" || echo "PR already exists"
