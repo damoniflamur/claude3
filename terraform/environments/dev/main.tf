@@ -5,5 +5,6 @@ module "s3" {
   env                = "dev"
   project            = "my-company-app"
   owner              = "platform-team"
+
   versioning_enabled = true
 }
