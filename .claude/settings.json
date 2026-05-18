@@ -11,10 +11,10 @@
       "Bash(terraform version)",
       "Bash(cd terraform/environments/dev *)",
       "Bash(cd terraform/environments/prod *)",
+      "Bash(terraform apply *)",
       "Read(**)"
     ],
     "deny": [
-      "Bash(terraform apply *)",
       "Bash(terraform destroy *)",
       "Bash(terraform force-unlock *)"
     ]

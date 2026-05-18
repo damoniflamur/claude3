@@ -9,13 +9,17 @@ allowed-tools:
 
 # /tfplan — Terraform Plan with Risk Summary
 
-Steps (run in order, stop if any step fails):
+Steps (run in order):
 
-1. Run `terraform fmt -check`. If formatting errors: run `terraform fmt` to fix, then continue.
+1. Run `terraform fmt -check`.
+   - If formatting errors: run `terraform fmt` to fix.
+   - If errors persist after fix, stop and show the error.
 
 2. Run `terraform init -upgrade`.
+   - If it fails, stop and display the error to the user.
 
-3. Run `terraform validate`. If errors: show them clearly and stop.
+3. Run `terraform validate`.
+   - If errors: show them clearly and stop.
 
 4. Run `terraform plan -out=tfplan`. Summarise the plan:
    - Resources to ADD (green)

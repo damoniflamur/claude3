@@ -11,10 +11,12 @@ allowed-tools:
 
 Steps:
 
-1. Check that `tfplan` file exists. If not: tell user to run `/tfplan` first.
+1. Check that the `tfplan` file exists.
+   - If it does not exist, tell the user to run `/tfplan` first and stop.
+   - If it exists, run `terraform show tfplan` to verify it is a valid plan. If invalid or corrupt, tell the user to regenerate it with `/tfplan` and stop.
 
-2. Show a one-line summary of what will change.
+2. Show a one-line summary of what will change by parsing the plan output for resource names and actions (e.g., "Plan: 2 to add, 1 to change, 0 to destroy.").
 
-3. Ask: "Are you sure you want to apply? Type YES to confirm." Wait for explicit `YES` (not `yes`, not `y`).
+3. Ask: "Are you sure you want to apply? Type YES to confirm." Accept only `YES` (case-sensitive). If the user provides any other input, ask again or stop.
 
 4. Run `terraform apply tfplan` and show the output summary.
