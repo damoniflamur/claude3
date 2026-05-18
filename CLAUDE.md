@@ -1,30 +1,22 @@
-# CLAUDE.md
+My Terraform Project
+What this project does
+Manages AWS infrastructure with Terraform.
+Rules Claude must follow
 
-You are helping maintain a Terraform AWS project.
+Never run terraform apply without my approval
+Always run terraform fmt and terraform validate before planning
+Use remote state (S3 backend), never local state in production
+Tag every resource with: env, owner, project
 
-Goals:
-- keep code simple
-- explain changes clearly
-- generate production-safe Terraform
-- prefer reusable modules
-- avoid hardcoded values
+Project details
 
-Always:
-- create missing Terraform files if needed
-- add variables automatically
-- add outputs automatically
-- add provider config if missing
-- add versions.tf if missing
-- use terraform fmt style
-- ensure terraform validate passes
-- explain folder structure
+Cloud: AWS
+Region: us-east-1
+Terraform version: >= 1.6
+State bucket: my-company-tfstate
 
-Testing workflow:
-- terraform fmt
-- terraform validate
-- terraform plan
-
-AWS:
-- region eu-central-1
-- use secure defaults
-- enable encryption where possible
+Module structure
+Every module must have:
+modules/<name>/main.tf
+modules/<name>/variables.tf
+modules/<name>/outputs.tf
