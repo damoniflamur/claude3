@@ -4,6 +4,6 @@ module "s3" {
   bucket_name        = "my-company-dev-data-890381434210"
   env                = "dev"
   project            = "my-company"
-  owner              = "platform-team"
+  owner              = "platform-team-v2"
   versioning_enabled = true
 }
