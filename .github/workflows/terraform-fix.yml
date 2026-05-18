@@ -1,0 +1,63 @@
+name: Terraform Auto-Fix
+
+on:
+  pull_request:
+    types: [labeled]
+    paths:
+      - "**.tf"
+      - "**.tfvars"
+
+jobs:
+  fix:
+    if: github.event.label.name == 'auto-fix'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Get latest review comment
+        id: review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          REVIEW=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq '[.[] | select(.user.login == "github-actions[bot]")] | last | .body')
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Apply fixes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
+          PR_REVIEW: ${{ steps.review.outputs.body }}
+        run: python3 .github/scripts/terraform_fix.py
+
+      - name: Validate fixes
+        run: terraform init -backend=false && terraform validate
+
+      - name: Open fix PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          FIX_BRANCH="fix/auto-${PR_NUMBER}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$FIX_BRANCH"
+          git add -A
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "fix: auto-fix review findings from PR #${PR_NUMBER}"
+          git push origin "$FIX_BRANCH"
+          SUMMARY=$(cat fix_summary.txt)
+          gh pr create \
+            --title "fix: auto-fix findings from PR #${PR_NUMBER}" \
+            --body "$(printf '## Auto-fix\n\n%s\n\nGenerated from review findings on #%s.\n\n🤖 Claude auto-fix' "$SUMMARY" "$PR_NUMBER")" \
+            --base "$HEAD_BRANCH"
