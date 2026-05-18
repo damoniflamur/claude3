@@ -36,28 +36,59 @@ jobs:
         run: terraform fmt -check -recursive
 
       - name: Terraform Plan
-        id: plan
         run: terraform plan -no-color 2>&1 | tee plan.txt
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Read Plan Output
-        id: read_plan
-        run: |
-          PLAN_CONTENT=$(cat plan.txt)
-          echo "plan_content<<EOF" >> $GITHUB_OUTPUT
-          echo "$PLAN_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Claude Review
-        uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
-            You are acting as the terraform-reviewer agent defined in .claude/agents/terraform-reviewer.md.
-            Apply every skill in .claude/skills/ and post a single review comment using the output format in the agent file.
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, urllib.request
 
-            <plan>
-            ${{ steps.read_plan.outputs.plan_content }}
-            </plan>
+          def read(path):
+              with open(path) as f:
+                  return f.read()
+
+          prompt = "\n\n".join([
+              read(".claude/agents/terraform-reviewer.md"),
+              "## Security Skill\n" + read(".claude/skills/security.md"),
+              "## Cost Skill\n"     + read(".claude/skills/cost.md"),
+              "## Best Practices Skill\n" + read(".claude/skills/best-practices.md"),
+              "## Terraform Plan Output\n```\n" + read("plan.txt") + "\n```",
+          ])
+
+          payload = json.dumps({
+              "model": "claude-sonnet-4-6",
+              "max_tokens": 4096,
+              "messages": [{"role": "user", "content": prompt}]
+          }).encode()
+
+          req = urllib.request.Request(
+              "https://api.anthropic.com/v1/messages",
+              data=payload,
+              headers={
+                  "x-api-key": os.environ["ANTHROPIC_API_KEY"],
+                  "anthropic-version": "2023-06-01",
+                  "content-type": "application/json",
+              }
+          )
+
+          with urllib.request.urlopen(req) as res:
+              review = json.loads(res.read())["content"][0]["text"]
+
+          with open("review.txt", "w") as f:
+              f.write(review)
+
+          print(review)
+          PYEOF
+
+      - name: Post PR Comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --body-file review.txt
