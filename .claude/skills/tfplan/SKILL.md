@@ -11,7 +11,7 @@ allowed-tools:
 
 # /tfplan — Terraform Plan with GitHub PR Review
 
-Steps (run in order):
+**Step A — Format and validate:**
 
 1. Run `terraform fmt -check` inside `terraform/environments/dev`.
    - If formatting errors: run `terraform fmt` to fix.
@@ -23,10 +23,14 @@ Steps (run in order):
 3. Run `terraform validate`.
    - If errors: show them clearly and stop.
 
+**Step B — Plan and summarise:**
+
 4. Run `terraform plan -out=tfplan`. Summarise the plan:
    - Resources to ADD (green)
    - Resources to CHANGE (yellow)
-   - Resources to DESTROY (red) ← flag these as HIGH RISK
+   - Resources to DESTROY (red) — mark these with a "⚠️ HIGH RISK" label in the summary output
+
+**Step C — Create review PR:**
 
 5. Create a GitHub PR for plan review:
    a. Run `terraform show -no-color tfplan` to capture the full human-readable plan.
@@ -46,6 +50,7 @@ Steps (run in order):
       - `body`: plan summary (ADD/CHANGE/DESTROY counts) followed by full plan output in a code block
       - `head`: the plan-review branch name
       - `base`: `main`
+      - If PR creation fails, display the error and suggest the user retry or create the PR manually.
    f. Return to main: `git checkout main`
    g. Tell the user: "Plan PR created: <PR URL>. Review and approve it, then run `/tfapply`."
 
