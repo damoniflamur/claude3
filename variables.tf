@@ -24,9 +24,9 @@ variable "tags" {
 variable "lifecycle_rules" {
   description = "List of lifecycle rules for the bucket"
   type = list(object({
-    id             = string
-    enabled        = bool
-    prefix         = string
+    id              = string
+    enabled         = bool
+    prefix          = string
     expiration_days = optional(number)
     transitions = list(object({
       days          = number
