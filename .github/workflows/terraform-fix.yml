@@ -3,9 +3,6 @@ name: Terraform Auto-Fix
 on:
   pull_request:
     types: [labeled]
-    paths:
-      - "**.tf"
-      - "**.tfvars"
 
 jobs:
   fix:
@@ -32,6 +29,8 @@ jobs:
           echo "$REVIEW" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
+      - uses: hashicorp/setup-terraform@v3
+
       - name: Apply fixes
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -40,7 +39,7 @@ jobs:
         run: python3 .github/scripts/terraform_fix.py
 
       - name: Validate fixes
-        run: terraform init -backend=false && terraform validate
+        run: terraform fmt -check -recursive && terraform init -backend=false && terraform validate
 
       - name: Open fix PR
         env:

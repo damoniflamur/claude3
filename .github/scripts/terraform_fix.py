@@ -19,27 +19,11 @@ for path in sorted(glob.glob("**/*.tf", recursive=True) + glob.glob("**/*.tfvars
     with open(path) as f:
         files += f"\n\n### {path}\n{f.read()}"
 
-# Review findings from the PR comment
-review = os.environ["PR_REVIEW"]
-
-user_message = f"""The following review findings were raised on this Terraform PR.
-Apply fixes for every BLOCK and WARN finding. Leave INFO findings as-is.
-
-## Review Findings
-{review}
+user_message = f"""## Review Findings
+{os.environ["PR_REVIEW"]}
 
 ## Current Terraform Files
-{files}
-
-Return ONLY a JSON object — no markdown, no explanation:
-{{
-  "files": [
-    {{"path": "relative/path/to/file.tf", "content": "...complete fixed file content..."}}
-  ],
-  "summary": "One sentence describing what was fixed."
-}}
-
-Only include files that need changes. The content must be the complete file, not a diff."""
+{files}"""
 
 req = urllib.request.Request(
     "https://api.anthropic.com/v1/messages",
@@ -70,5 +54,4 @@ for file_entry in result["files"]:
     path.write_text(file_entry["content"])
     print(f"Fixed: {path}")
 
-# Write summary for the PR description
 Path("fix_summary.txt").write_text(result.get("summary", "Auto-fix applied."))
