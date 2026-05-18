@@ -9,7 +9,7 @@ on:
       - "**.tfvars"
 
 jobs:
-  apply:
+  plan:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
@@ -31,6 +31,47 @@ jobs:
 
       - name: Plan
         run: terraform plan -out=tfplan
+
+      - name: Upload plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+          retention-days: 1
+
+      - name: Comment plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          PLAN=$(terraform show -no-color tfplan 2>&1)
+          gh pr comment "$PR_NUMBER" --body "$(printf '### Terraform Plan\n\n```\n%s\n```\n\nApprove the [deployment](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) to apply.' "$PLAN")"
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Init
+        run: terraform init
+
+      - name: Download plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
 
       - name: Apply
         run: terraform apply -auto-approve tfplan
