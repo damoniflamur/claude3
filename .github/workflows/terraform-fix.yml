@@ -3,9 +3,6 @@ name: Terraform Auto-Fix
 on:
   pull_request:
     types: [labeled]
-    paths:
-      - "**.tf"
-      - "**.tfvars"
 
 jobs:
   fix:
