@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__kubernetes__resources_get",
+      "mcp__kubernetes__kubectl_get",
+      "mcp__kubernetes__namespaces_list",
+      "mcp__kubernetes__pods_list",
+      "mcp__kubernetes__configuration_contexts_list",
+      "mcp__kubernetes__events_list",
+      "Bash(kubectl get *)",
+      "Bash(terraform plan *)",
+      "Bash(terraform show *)",
+      "Bash(terraform validate)"
+    ]
+  }
+}
