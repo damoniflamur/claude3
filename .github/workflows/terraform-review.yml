@@ -35,11 +35,19 @@ jobs:
               with open(path) as f:
                   files += f"\n\n### {path}\n{f.read()}"
 
-          prompt = f"""You are a senior DevOps engineer reviewing a Terraform PR.
-          Review the files below for security issues, cost impact, and best practices.
-          Score out of 100 and list findings with severity (BLOCK / WARN / INFO).
-          Include an hcl fix snippet for every issue.
+          skills = ""
+          for skill_path in sorted(glob.glob(".claude/skills/*.md")):
+              with open(skill_path) as f:
+                  skills += f"\n\n---\n{f.read()}"
 
+          prompt = f"""You are a senior DevOps engineer reviewing a Terraform PR.
+          Apply every check defined in the skills below. Score out of 100.
+          List findings with severity (BLOCK / WARN / INFO) and include an hcl fix snippet for every issue.
+
+          ## Review Skills
+          {skills}
+
+          ## Terraform Files
           {files}"""
 
           req = urllib.request.Request(
