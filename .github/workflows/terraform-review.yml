@@ -24,6 +24,7 @@ jobs:
       - name: Claude Review
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ vars.CLAUDE_MODEL }}
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -53,7 +54,7 @@ jobs:
           req = urllib.request.Request(
               "https://api.anthropic.com/v1/messages",
               data=json.dumps({
-                  "model": "claude-sonnet-4-6",
+                  "model": os.environ["CLAUDE_MODEL"],
                   "max_tokens": 2048,
                   "messages": [{"role": "user", "content": prompt}]
               }).encode(),
