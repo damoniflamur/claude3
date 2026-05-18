@@ -1,0 +1,1 @@
+Fixed invalid boolean literal 'true1' to 'true' in terraform.tfvars and removed the public-read bucket policy that conflicts with the public access block settings.
