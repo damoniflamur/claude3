@@ -5,8 +5,11 @@ import glob
 import urllib.request
 from pathlib import Path
 
-# Agent definition → system prompt (strip YAML frontmatter)
-with open(".claude/agents/terraform-reviewer.md") as f:
+# Load agent from .claude/agents/ — first match wins
+agent_files = sorted(glob.glob(".claude/agents/*.md"))
+if not agent_files:
+    raise FileNotFoundError("No agent found in .claude/agents/")
+with open(agent_files[0]) as f:
     raw = f.read()
 system_prompt = re.sub(r"^---.*?---\s*", "", raw, flags=re.DOTALL).strip()
 
