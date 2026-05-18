@@ -5,6 +5,7 @@
 .terraform/
 .terraform.lock.hcl
 tfplan
+!.claude/skills/tfplan/
 
 # Sensitive
 *.tfvars.json
