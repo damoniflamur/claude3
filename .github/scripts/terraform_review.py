@@ -9,9 +9,8 @@ for path in sorted(glob.glob("**/*.tf", recursive=True) + glob.glob("**/*.tfvars
         files += f"\n\n### {path}\n{f.read()}"
 
 skills = ""
-for skill_path in sorted(glob.glob(".claude/skills/*.md")):
-    with open(skill_path) as f:
-        skills += f"\n\n---\n{f.read()}"
+with open(".claude/skills/security.md") as f:
+    skills = f.read()
 
 prompt = f"""You are a senior DevOps engineer reviewing a Terraform PR.
 Apply every check defined in the skills below. Score out of 100.
